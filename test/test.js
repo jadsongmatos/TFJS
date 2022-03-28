@@ -37,7 +37,7 @@ async function start() {
   console.log("Backend", tf.getBackend());
 
   model = await tf.loadLayersModel(
-    "http://127.0.0.1:5500/models/meanSquaredError/sgd/2-1-2/mymodel.json"
+    "http://127.0.0.1:5500/models/meanSquaredError/rmsprop/2-1-2/mymodel.json"
   );
 
   model.summary();

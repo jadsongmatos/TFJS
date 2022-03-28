@@ -29,7 +29,9 @@ const model = tf.sequential();
 
 // Build a sequential model
 //model.add(tf.layers.dense({ units: 2, inputShape: [2] }));
-model.add(tf.layers.dense({ units: 1, inputShape: [2] }));
+model.add(tf.layers.dense({ units: 2, inputShape: [2] }));
+model.add(tf.layers.dense({ units: 1 }));
+model.add(tf.layers.dense({ units: 2 }));
 // Add an output layer
 model.add(tf.layers.dense({ units: 2 }));
 
@@ -91,9 +93,9 @@ async function start() {
       ])
     )
     .array();
-  console.log(m_predict[0]);
+  console.log(m_predict);
 
-  const predictedPoints = m_predict[0].map((val, i) => {
+  const predictedPoints = m_predict.map((val, i) => {
     return { x: val[0], y: val[0] };
   });
 
