@@ -1,44 +1,100 @@
-const callbacks = {
-  onEpochEnd: async (epoch, logs) => {
-    tfvis.show.fitCallbacks(epoch, logs);
-    console.log("epoch: " + epoch + JSON.stringify(logs));
-  },
-};
+const float_MaxValue = 3.4028235e38;
+const float_MinValue = -3.4028235e38;
+const size = Math.pow(2, 16);
+const train = 0.1;
+var seed = 0;
 
 // Generate some synthetic data for training.
-const xs = tf.tensor2d([[1], [2], [3], [4]], [4, 1]);
-const ys = tf.tensor2d([[1], [3], [5], [7]], [4, 1]);
+var inputTensor = tf.randomUniform(
+  [size, 2],
+  float_MinValue,
+  float_MaxValue,
+  "float32",
+  seed
+);
+seed++;
+//tf.tensor2d([[1], [2], [3], [4]], [4, 1]);
 
-const surface = { name: "show.fitCallbacks", tab: "Training" };
+const inputMax = tf.tensor(float_MaxValue); //inputTensor.max();
+const inputMin = tf.tensor(float_MinValue); //inputTensor.min();
+const float_MValue = tf.tensor(6.805647e38); // inputMax.sub(inputMin)
+var normalizedInputs = inputTensor.sub(inputMin).div(float_MValue);
+
+//const normalizedInputs = inputTensor.softmax();
+
+//const surface = { name: "show.fitCallbacks", tab: "Training" };
+const surface = { name: "show.history live", tab: "Training" };
+
+const model = tf.sequential();
+
+// Build a sequential model
+//model.add(tf.layers.dense({ units: 2, inputShape: [2] }));
+model.add(tf.layers.dense({ units: 1, inputShape: [2] }));
+// Add an output layer
+model.add(tf.layers.dense({ units: 2 }));
+
+model.summary();
+
+tfvis.show.modelSummary(surface, model);
+
+var m_predict;
+
+var history_train = [];
 
 // Build and compile model.
-async function basicRegression() {
-  // Build a sequential model
-  const model = tf.sequential();
-  model.add(tf.layers.dense({ units: 1, inputShape: [1], useBias: true }));
-  // Add an output layer
-  model.add(tf.layers.dense({ units: 1, useBias: true }));
+async function start() {
+  console.log("Backend", tf.getBackend());
 
-  model.compile({ optimizer: "sgd", loss: "meanSquaredError" });
-
-  tfvis.show.modelSummary(surface, model);
+  //adam / sgd / rmsprop / adamax
+  //meanSquaredError / meanAbsoluteError /
+  //0.000001
+  model.compile({
+    optimizer: tf.train.adam(train),
+    loss: "meanAbsoluteError",
+    metrics: ["acc"],
+  });
 
   // Train model with fit().
-  await model.fit(xs, ys, {
-    batchSize: 32,
-    epochs: 50,
-    shuffle: true,
-    callbacks: tfvis.show.fitCallbacks(surface, ["loss", "acc"]), //callbacks
+  await model.fit(normalizedInputs, normalizedInputs, {
+    batchSize: size,
+    epochs: 1024,
+    //shuffle: true,
+    callbacks: {
+      onEpochEnd: (epoch, log) => {
+        history_train.push(log);
+        console.log("Epoch: " + epoch + " Loss: " + log.loss);
+
+        inputTensor = tf.randomUniform(
+          [size, 2],
+          float_MinValue,
+          float_MaxValue,
+          "float32",
+          seed
+        );
+
+        seed++;
+
+        normalizedInputs = inputTensor.sub(inputMin).div(float_MValue);
+
+        console.log("Epoch:", epoch, "Loss:", log.loss);
+        tfvis.show.history(surface, history_train, ["loss","acc"]);
+      },
+    },
   });
 
   // Run inference with predict().
-  const xss = await model
-    .predict(tf.tensor1d([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
+  m_predict = await model
+    .predict(
+      tf.tensor2d([
+        [3, 4],
+        [7, 9],
+      ])
+    )
     .array();
-  console.log(xss);
+  console.log(m_predict[0]);
 
-  const predictedPoints = xss.map((val, i) => {
-    return { x: i, y: val[0] };
+  const predictedPoints = m_predict[0].map((val, i) => {
+    return { x: val[0], y: val[0] };
   });
 
   tfvis.render.scatterplot(
@@ -46,10 +102,8 @@ async function basicRegression() {
     {
       values: [
         [
-          { x: 1, y: 1 },
-          { x: 2, y: 3 },
-          { x: 3, y: 5 },
-          { x: 4, y: 7 },
+          { x: 3, y: 4 },
+          { x: 7, y: 9 },
         ],
         predictedPoints,
       ],
@@ -59,4 +113,4 @@ async function basicRegression() {
 }
 
 // Create a basic regression model
-basicRegression();
+tf.setBackend("wasm").then(() => start());
