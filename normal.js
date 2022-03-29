@@ -1,8 +1,8 @@
-const float_MaxValue = 1; //Math.pow(2, 112)//3.4028235e38;//65500.0
-const float_MinValue = -1; //-Math.pow(2,112)//-3.4028235e38;//-65500.0
-const size = Math.pow(2, 17);
+const float_MaxValue = 3.4028235e38;
+const float_MinValue = -3.4028235e38;
+const size = Math.pow(2, 16);
 var train = 0.1;
-var seed = 131074;
+var seed = 0;
 
 // Generate some synthetic data for training.
 var inputTensor = tf.randomUniform(
@@ -10,17 +10,19 @@ var inputTensor = tf.randomUniform(
   float_MinValue,
   float_MaxValue,
   "float32",
-  //seed
+  seed
 );
-
-const validation_data = tf.randomUniform(
-  [128, 2],
-  float_MinValue,
-  float_MaxValue,
-  "float32"
-);
-
 seed++;
+//tf.tensor2d([[1], [2], [3], [4]], [4, 1]);
+
+//var inputMax = tf.tensor(float_MaxValue);
+//var inputMin = tf.tensor(float_MinValue);
+var inputMax = inputTensor.max();
+var inputMin = inputTensor.min();
+const float_MValue = tf.tensor(6.805647e38);
+var normalizedInputs = inputTensor.sub(inputMin).div(float_MValue);
+
+//const normalizedInputs = inputTensor.softmax();
 
 //const surface = { name: "show.fitCallbacks", tab: "Training" };
 const surface = { name: "show.history live", tab: "Training" };
@@ -29,11 +31,9 @@ const model = tf.sequential();
 
 // Build a sequential model
 //model.add(tf.layers.dense({ units: 2, inputShape: [2] }));
-model.add(tf.layers.dense({ units: 2, inputShape: [2] }));
-model.add(tf.layers.dense({ units: 2 }));
-
+model.add(tf.layers.dense({ units: 16, inputShape: [2] }));
 model.add(tf.layers.dense({ units: 1 }));
-model.add(tf.layers.dense({ units: 2 }));
+model.add(tf.layers.dense({ units: 16 }));
 // Add an output layer
 model.add(tf.layers.dense({ units: 2 }));
 
@@ -50,20 +50,19 @@ async function start() {
   console.log("Backend", tf.getBackend());
 
   //adam / sgd / rmsprop / adamax
-  //meanSquaredError / meanAbsoluteError
+  //meanSquaredError / meanAbsoluteError /
   //0.000001
   model.compile({
     optimizer: tf.train.adam(train),
-    loss: "meanSquaredError",
+    loss: "meanAbsoluteError",
     metrics: ["acc"],
   });
 
   // Train model with fit().
-  await model.fit(inputTensor, inputTensor, {
+  await model.fit(normalizedInputs, normalizedInputs, {
     batchSize: size,
     epochs: 1024,
     //shuffle: true,
-    validationData: validation_data,
     callbacks: {
       onEpochEnd: (epoch, log) => {
         history_train.push(log);
@@ -74,12 +73,18 @@ async function start() {
           float_MinValue,
           float_MaxValue,
           "float32",
-         // seed
+          seed
         );
-        //seed++;
+
+        inputMax = inputTensor.max();
+        inputMin = inputTensor.min();
+
+        seed++;
+
+        normalizedInputs = inputTensor.sub(inputMin).div(float_MValue);
 
         console.log("Epoch:", epoch, "Loss:", log.loss);
-        tfvis.show.history(surface, history_train, ["loss", "acc"]);
+        tfvis.show.history(surface, history_train, ["loss","acc"]);
       },
     },
   });
@@ -90,12 +95,9 @@ async function start() {
       tf.tensor2d([
         [3, 4],
         [7, 9],
-        [-128, -1808],
       ])
     )
     .array();
-
-  model.summary();
   console.log(m_predict);
 
   const predictedPoints = m_predict.map((val, i) => {
@@ -109,7 +111,6 @@ async function start() {
         [
           { x: 3, y: 4 },
           { x: 7, y: 9 },
-          { x: -128, y: -1808 },
         ],
         predictedPoints,
       ],
