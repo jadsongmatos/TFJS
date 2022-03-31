@@ -11,7 +11,7 @@ async function start() {
    //adam / sgd / rmsprop / adamax
   //meanSquaredError / meanAbsoluteError /
   model = await tf.loadLayersModel(
-    "http://127.0.0.1:5500/models/meanSquaredError/adam/1,-1/2-2-1-2-2/0/mymodel.json"
+    "../models/meanSquaredError/adam/1,-1/2-2-1-2-2/0/mymodel.json"
   );
 
   model.summary();
