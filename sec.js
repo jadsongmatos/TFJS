@@ -1,25 +1,17 @@
 const float_MaxValue = 1; //Math.pow(2, 112)//3.4028235e38;//65500.0
 const float_MinValue = -1; //-Math.pow(2,112)//-3.4028235e38;//-65500.0
-const size = Math.pow(2, 17);
+const size = 512//Math.pow(2, 17);
 var train = 0.1;
-var seed = 131074;
+var seed = 0;
 
 // Generate some synthetic data for training.
 var inputTensor = tf.randomUniform(
   [size, 2],
   float_MinValue,
   float_MaxValue,
-  "float32"
-  //seed
+  "float32",
+  seed
 );
-
-const validation_data = tf.randomUniform(
-  [128, 2],
-  float_MinValue,
-  float_MaxValue,
-  "float32"
-);
-
 seed++;
 
 //const surface = { name: "show.fitCallbacks", tab: "Training" };
@@ -30,8 +22,27 @@ const model = tf.sequential();
 // Build a sequential model
 //model.add(tf.layers.dense({ units: 2, inputShape: [2] }));
 model.add(tf.layers.dense({ units: 2, inputShape: [2] }));
+
+model.add(tf.layers.dense({ units: 2 }));
+model.add(tf.layers.dense({ units: 4 }));
+model.add(tf.layers.dense({ units: 8 }));
+model.add(tf.layers.dense({ units: 16 }));
+model.add(tf.layers.dense({ units: 32 }));
+model.add(tf.layers.dense({ units: 32 }));
+model.add(tf.layers.dense({ units: 16 }));
+model.add(tf.layers.dense({ units: 8 }));
+model.add(tf.layers.dense({ units: 4 }));
 model.add(tf.layers.dense({ units: 2 }));
 model.add(tf.layers.dense({ units: 1 }));
+model.add(tf.layers.dense({ units: 2 }));
+model.add(tf.layers.dense({ units: 4 }));
+model.add(tf.layers.dense({ units: 8 }));
+model.add(tf.layers.dense({ units: 16 }));
+model.add(tf.layers.dense({ units: 32 }));
+model.add(tf.layers.dense({ units: 32 }));
+model.add(tf.layers.dense({ units: 16 }));
+model.add(tf.layers.dense({ units: 8 }));
+model.add(tf.layers.dense({ units: 4 }));
 model.add(tf.layers.dense({ units: 2 }));
 // Add an output layer
 model.add(tf.layers.dense({ units: 2 }));
@@ -45,11 +56,6 @@ var result;
 
 var history_train = [];
 
-function lossC(labels,predictions){
-  console.log(labels,predictions)
-  return tf.metrics.meanSquaredError(labels, predictions);
-}
-
 // Build and compile model.
 async function start() {
   console.log("Backend", tf.getBackend());
@@ -59,16 +65,16 @@ async function start() {
   //0.000001
   model.compile({
     optimizer: tf.train.adam(train),
-    loss: lossC,
+    loss: "meanSquaredError",
     metrics: ["acc"],
   });
 
   // Train model with fit().
   await model.fit(inputTensor, inputTensor, {
     batchSize: size,
-    epochs: 128,//1024,
+    epochs: 1024,
     //shuffle: true,
-    validationData: validation_data,
+    //validationData: validation_data,
     callbacks: {
       onEpochEnd: (epoch, log) => {
         history_train.push(log);
@@ -78,10 +84,10 @@ async function start() {
           [size, 2],
           float_MinValue,
           float_MaxValue,
-          "float32"
-          // seed
+          "float32",
+          seed
         );
-        //seed++;
+        seed++;
 
         console.log("Epoch:", epoch, "Loss:", log.loss);
         tfvis.show.history(surface, history_train, ["loss", "acc"]);
@@ -128,4 +134,4 @@ async function start() {
 }
 
 // Create a basic regression model
-tf.setBackend("wasm").then(() => start());
+tf.setBackend("webgl").then(() => start());
